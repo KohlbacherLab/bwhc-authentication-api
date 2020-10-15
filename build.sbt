@@ -35,7 +35,8 @@ lazy val root = project
   )
   .aggregate(
     api,
-    fake_session_manager
+    fake_session_manager,
+    session_manager_impl
   )
 
 
@@ -48,5 +49,12 @@ lazy val api = project
 lazy val fake_session_manager = project
   .settings(
     name := "fake-session-manager",
+  )
+  .dependsOn(api)
+
+
+lazy val session_manager_impl = project
+  .settings(
+    name := "session-manager-impl",
   )
   .dependsOn(api)

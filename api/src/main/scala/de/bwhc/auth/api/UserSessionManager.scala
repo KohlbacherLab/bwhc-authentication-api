@@ -25,7 +25,9 @@ trait UserSessionManager extends AuthenticationService[UserWithRoles]
   def login(
     userWithRoles: UserWithRoles
   )(
-    implicit ec: ExecutionContext
+    implicit
+    request: RequestHeader,
+    ec: ExecutionContext
   ): Future[Result]
 
 

@@ -28,6 +28,7 @@ object Authorizations
   val LocalQCAccessRights =
     Authorization[UserWithRoles](user =>
       (user is LocalZPMCoordinator) ||
+      (user is GlobalZPMCoordinator) ||
       (user is MTBCoordinator)
     )
 
@@ -39,13 +40,17 @@ object Authorizations
   val LocalEvidenceQueryRights =
     Authorization[UserWithRoles](user =>
       (user is LocalZPMCoordinator) ||
+      (user is GlobalZPMCoordinator) ||
       (user is MTBCoordinator) ||
       (user is Researcher)
     )
 
 
-  def FederatedEvidenceQueryRights(implicit ec: ExecutionContext) =
-    LocalEvidenceQueryRights or Authorization(_ is GlobalZPMCoordinator)
+  def FederatedEvidenceQueryRights =
+    Authorization[UserWithRoles](user =>
+      (user is GlobalZPMCoordinator) ||
+      (user is Researcher)
+    )
 
 
   val EvidenceQueryRights = LocalEvidenceQueryRights

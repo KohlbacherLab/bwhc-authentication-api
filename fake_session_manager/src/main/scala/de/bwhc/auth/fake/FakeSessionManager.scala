@@ -52,7 +52,9 @@ with Logging
   def login(
     userWithRoles: UserWithRoles
   )(
-    implicit ec: ExecutionContext
+    implicit
+    request: RequestHeader,
+    ec: ExecutionContext
   ): Future[Result] = {
 
     log.warn("FakeSessionManager only meant for temporary testing purposes. Replace it with a real implementation in production!")
