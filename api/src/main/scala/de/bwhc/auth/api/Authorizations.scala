@@ -14,16 +14,42 @@ object Authorizations
 
   import de.bwhc.user.api.Role._
 
+  import Authorization._
+
 
   val AdminRights =
-    Authorization[UserWithRoles](_.roles contains Admin)
+    Authorization[UserWithRoles](_ is Admin)
 
 
-  val DataQualityModeAccess =
-    Authorization[UserWithRoles]{
-      case UserWithRoles(_,roles) =>
-        (roles contains Admin) || (roles contains Documentarist)
-    }
+  val DataQualityAccessRights =
+    Authorization[UserWithRoles](_ is Documentarist)
+
+
+  val LocalQCAccessRights =
+    Authorization[UserWithRoles](user =>
+      (user is LocalZPMCoordinator) ||
+      (user is MTBCoordinator)
+    )
+
+
+  val GlobalQCAccessRights =
+    Authorization[UserWithRoles](_ is GlobalZPMCoordinator)
+
+
+  val LocalEvidenceQueryRights =
+    Authorization[UserWithRoles](user =>
+      (user is LocalZPMCoordinator) ||
+      (user is MTBCoordinator) ||
+      (user is Researcher)
+    )
+
+
+  def FederatedEvidenceQueryRights(implicit ec: ExecutionContext) =
+    LocalEvidenceQueryRights or Authorization(_ is GlobalZPMCoordinator)
+
+
+  val EvidenceQueryRights = LocalEvidenceQueryRights
+
 
 
   def ResourceOwnership[Id](
@@ -31,9 +57,12 @@ object Authorizations
   )(
     implicit
     ec: ExecutionContext,
-    checkOwner: (User.Id,Id) => Future[Boolean]
+    isOwner: (User.Id,Id) => Future[Boolean]
   ): Authorization[UserWithRoles] =
-    Authorization.async { case UserWithRoles(user,_) => checkOwner(user,id) }
+    Authorization.async {
+      case UserWithRoles(user,_) => isOwner(user,id)
+    }
 
 
 }
+
