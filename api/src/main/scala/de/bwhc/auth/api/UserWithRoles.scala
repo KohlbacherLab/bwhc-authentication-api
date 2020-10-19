@@ -18,9 +18,18 @@ final case class UserWithRoles
 )
 {
 
-  def is(role: Role.Value) = roles contains role
+  def hasRole(role: Role.Value) = roles contains role
+
+  def hasAnyOf(rs: Set[Role.Value]) = !(roles & rs).isEmpty
 
   def has(
+    authorization: Authorization[UserWithRoles]
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Boolean] = authorization isAuthorized this 
+
+
+  def isAllowedTo(
     authorization: Authorization[UserWithRoles]
   )(
     implicit ec: ExecutionContext

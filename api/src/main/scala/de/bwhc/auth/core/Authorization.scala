@@ -45,6 +45,10 @@ object Authorization
 
     def or(b: Authorization[User]) = a || b
 
+    def AND(b: Authorization[User]) = a && b
+
+    def OR(b: Authorization[User]) = a || b
+
   }
 
 
