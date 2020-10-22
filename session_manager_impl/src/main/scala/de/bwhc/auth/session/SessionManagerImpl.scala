@@ -46,6 +46,8 @@ with Logging
 
   import ControllerHelpers.{Ok,NotFound}
 
+  import java.util.concurrent.{Executors,TimeUnit}
+
 
   private val BWHC_SESSION_KEY = "bwhc-session-token"
 
@@ -59,11 +61,45 @@ with Logging
   private val timeoutSeconds = 300
 
 
-  //TODO: Clean-up task for timed-out sessions
+  //---------------------------------------------------------------------------
+  // Scheduled clean-up task of timed-out sessions
+  //---------------------------------------------------------------------------
+
+  private class CleanupTask extends Runnable with Logging
+  {
+
+    override def run: Unit = {
+
+      log.debug("Running clean-up task for timed out User sessions")
+
+      val timedOutSessionIds =
+        sessions.values
+          .filter(_.lastRefresh isBefore Instant.now.minusSeconds(300)) // 50 min timeout limit
+          .map(_.token)
+
+      if (!timedOutSessionIds.isEmpty){
+         log.info("Timed out sessions detected, removing them...")
+      }
+
+      sessions --= timedOutSessionIds
+
+      log.debug("Finished running clean-up task for timed out sessions")
+
+    }
+
+  }
+
+  private val executor = Executors.newSingleThreadScheduledExecutor
+
+  executor.scheduleAtFixedRate(
+    new CleanupTask,
+    30,
+    60,
+    TimeUnit.SECONDS
+  )
 
 
-
-  def login(
+  override def login(
     userWithRoles: UserWithRoles
   )(
     implicit
@@ -78,7 +114,7 @@ with Logging
       sessions.values
         .find(session => session.userWithRoles.userId == userWithRoles.userId)
         .map(_.token)
-        .tapEach(sessions -= _)
+        .tapEach(sessions remove _)
 
       val session = 
         Session(
@@ -97,11 +133,13 @@ with Logging
   }
 
 
-  def authenticate(
+  override def authenticate(
     request: RequestHeader
   )(
     implicit ec: ExecutionContext
   ): Future[Option[UserWithRoles]] = {
+
+    log.debug(s"Authenticating request: ${request.session.get(BWHC_SESSION_KEY)}")
 
     Future.successful {
 
@@ -124,8 +162,7 @@ with Logging
   }
 
 
-
-  def logout(
+  override def logout(
     request: RequestHeader
   )(
     implicit ec: ExecutionContext
@@ -137,7 +174,7 @@ with Logging
         for {
           tkn <- request.session.get(BWHC_SESSION_KEY)
 
-          ssn <- sessions.remove(Session.Token(tkn))
+          ssn <- sessions remove Session.Token(tkn)
 
            _ = log.info(s"Successfully logged out ${ssn.userWithRoles.userId}")
 
@@ -147,16 +184,6 @@ with Logging
 
       loggedOut.getOrElse(NotFound.withNewSession)
 
-/*       
-      request.session
-        .get(BWHC_SESSION_KEY)
-        .tapEach(
-          tkn => sessions -= Session.Token(tkn)
-        )
-        .headOption
-        .map(tkn => Ok.withNewSession)
-        .getOrElse(Ok.withNewSession)
-*/       
     }
 
   }

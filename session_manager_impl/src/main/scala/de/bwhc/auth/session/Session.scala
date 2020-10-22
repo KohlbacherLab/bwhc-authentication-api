@@ -25,7 +25,6 @@ object Session
 
   implicit val formatToken = Json.valueFormat[Token]
 
-
   implicit val format = Json.format[Session]
 
 }
