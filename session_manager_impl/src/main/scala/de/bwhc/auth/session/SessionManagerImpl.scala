@@ -11,6 +11,8 @@ import scala.collection.concurrent.{Map,TrieMap}
 
 import play.api.mvc.{
   ControllerHelpers,
+  Cookie,
+  DiscardingCookie,
   RequestHeader,
   Result
 }
@@ -126,7 +128,17 @@ with Logging
 
       sessions += (session.token -> session)
 
-      Ok.addingToSession(BWHC_SESSION_KEY -> session.token.value)
+//      Ok.addingToSession(BWHC_SESSION_KEY -> session.token.value)
+      Ok.withCookies(
+        Cookie(
+          name = BWHC_SESSION_KEY,
+          value = session.token.value,
+//          domain = ""  //TODO: add bwhc-domain in production
+//          path = "/bwhc",
+//          secure = true,  //TODO: enable production
+          httpOnly = true
+        )
+      )
    
     }
 
@@ -145,7 +157,8 @@ with Logging
 
       for {
 
-        token <- request.session.get(BWHC_SESSION_KEY)
+        token <- request.cookies.get(BWHC_SESSION_KEY).map(_.value)
+//        token <- request.session.get(BWHC_SESSION_KEY)
 
         session <- sessions.get(Session.Token(token))
 
@@ -178,7 +191,8 @@ with Logging
 
            _ = log.info(s"Successfully logged out ${ssn.userWithRoles.userId}")
 
-           result = Ok.removingFromSession(BWHC_SESSION_KEY)(request)
+//           result = Ok.removingFromSession(BWHC_SESSION_KEY)(request)
+           result = Ok.discardingCookies(DiscardingCookie(BWHC_SESSION_KEY))
 
         } yield result
 
