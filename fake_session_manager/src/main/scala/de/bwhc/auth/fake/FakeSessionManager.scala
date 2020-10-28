@@ -37,7 +37,7 @@ with Logging
     )
 
 
-  def authenticate(
+  override def authenticate(
     request: RequestHeader
   )(
     implicit ec: ExecutionContext
@@ -49,21 +49,28 @@ with Logging
   }
 
 
-  def login(
-    userWithRoles: UserWithRoles
+  import play.api.libs.json.{Json,Writes}
+
+
+  override def login[T: Writes](
+    userWithRoles: UserWithRoles,
+    body: Option[T] = None
   )(
     implicit
-    request: RequestHeader,
     ec: ExecutionContext
   ): Future[Result] = {
 
+    import ControllerHelpers.Ok
+
     log.warn("FakeSessionManager only meant for temporary testing purposes. Replace it with a real implementation in production!")
 
-    Future.successful(ControllerHelpers.Ok)
+    Future.successful(
+      body.map(Json.toJson(_)).map(Ok(_)).getOrElse(Ok)
+    )
   }
 
 
-  def logout(
+  override def logout(
     request: RequestHeader
   )(
     implicit ec: ExecutionContext

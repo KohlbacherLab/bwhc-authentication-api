@@ -5,6 +5,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 import play.api.mvc.{RequestHeader,Result}
 
+import play.api.libs.json.Writes
+
 import de.bwhc.util.spi._
 
 import de.bwhc.user.api.User
@@ -22,11 +24,11 @@ object UserSessionManager extends SPILoader(classOf[UserSessionManagerProvider])
 trait UserSessionManager extends AuthenticationService[UserWithRoles]
 {
 
-  def login(
-    userWithRoles: UserWithRoles
+  def login[T: Writes](
+    userWithRoles: UserWithRoles,
+    body: Option[T] = None
   )(
     implicit
-    request: RequestHeader,
     ec: ExecutionContext
   ): Future[Result]
 

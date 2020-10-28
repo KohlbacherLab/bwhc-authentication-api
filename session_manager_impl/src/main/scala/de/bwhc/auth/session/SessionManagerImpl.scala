@@ -17,6 +17,8 @@ import play.api.mvc.{
   Result
 }
 
+import play.api.libs.json.{Json,Writes}
+
 import de.bwhc.util.Logging
 
 import de.bwhc.auth.api._
@@ -101,11 +103,11 @@ with Logging
   )
 
 
-  override def login(
-    userWithRoles: UserWithRoles
+  override def login[T: Writes](
+    userWithRoles: UserWithRoles,
+    body: Option[T] = None
   )(
     implicit
-    request: RequestHeader,
     ec: ExecutionContext
   ): Future[Result] = {
 
@@ -128,17 +130,20 @@ with Logging
 
       sessions += (session.token -> session)
 
-//      Ok.addingToSession(BWHC_SESSION_KEY -> session.token.value)
-      Ok.withCookies(
-        Cookie(
-          name = BWHC_SESSION_KEY,
-          value = session.token.value,
-//          domain = ""  //TODO: add bwhc-domain in production
-//          path = "/bwhc",
-//          secure = true,  //TODO: enable production
-          httpOnly = true
+      body.map(Json.toJson(_))
+        .map(Ok(_))
+        .getOrElse(Ok)
+        .withCookies(
+          Cookie(
+            name = BWHC_SESSION_KEY,
+            value = session.token.value,
+//            domain = ""  //TODO: add bwhc-domain in production
+//            path = "/bwhc",
+//            secure = true,  //TODO: enable production
+            httpOnly = false
+//            httpOnly = true
+          )
         )
-      )
    
     }
 
@@ -151,7 +156,7 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Option[UserWithRoles]] = {
 
-    log.debug(s"Authenticating request: ${request.session.get(BWHC_SESSION_KEY)}")
+    log.debug(s"Authenticating request: ${request.cookies.get(BWHC_SESSION_KEY)}")
 
     Future.successful {
 
