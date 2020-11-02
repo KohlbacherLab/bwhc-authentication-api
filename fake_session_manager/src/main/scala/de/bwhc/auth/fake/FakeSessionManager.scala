@@ -54,7 +54,7 @@ with Logging
 
   override def login[T: Writes](
     userWithRoles: UserWithRoles,
-    body: Option[T] = None
+//    body: Option[T] = None
   )(
     implicit
     ec: ExecutionContext
@@ -65,7 +65,7 @@ with Logging
     log.warn("FakeSessionManager only meant for temporary testing purposes. Replace it with a real implementation in production!")
 
     Future.successful(
-      body.map(Json.toJson(_)).map(Ok(_)).getOrElse(Ok)
+      Ok
     )
   }
 

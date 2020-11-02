@@ -34,12 +34,9 @@ class SessionManagerImplProvider extends UserSessionManagerProvider
 
 }
 
-
 object SessionManagerImpl
 {
-
   lazy val instance = new SessionManagerImpl
-
 }
 
 
@@ -48,21 +45,18 @@ extends UserSessionManager
 with Logging
 {
 
-  import ControllerHelpers.{Ok,NotFound}
+  import ControllerHelpers._
 
   import java.util.concurrent.{Executors,TimeUnit}
 
 
-  private val BWHC_SESSION_KEY = "bwhc-session-token"
+  private def newToken: AccessToken =
+    AccessToken(UUID.randomUUID.toString)
 
+  private val sessions: Map[AccessToken, Session] =
+    TrieMap.empty[AccessToken, Session] 
 
-  private def newToken: Session.Token =
-    Session.Token(UUID.randomUUID.toString)
-
-  private val sessions: Map[Session.Token, Session] =
-    TrieMap.empty[Session.Token, Session] 
-
-  private val timeoutSeconds = 300
+  private val timeoutSeconds = 300 // 5 min timeout limit
 
 
   //---------------------------------------------------------------------------
@@ -78,7 +72,7 @@ with Logging
 
       val timedOutSessionIds =
         sessions.values
-          .filter(_.lastRefresh isBefore Instant.now.minusSeconds(300)) // 50 min timeout limit
+          .filter(_.lastRefresh isBefore Instant.now.minusSeconds(timeoutSeconds))
           .map(_.token)
 
       if (!timedOutSessionIds.isEmpty){
@@ -105,7 +99,7 @@ with Logging
 
   override def login[T: Writes](
     userWithRoles: UserWithRoles,
-    body: Option[T] = None
+//    body: Option[T] = None
   )(
     implicit
     ec: ExecutionContext
@@ -130,21 +124,18 @@ with Logging
 
       sessions += (session.token -> session)
 
-      body.map(Json.toJson(_))
-        .map(Ok(_))
-        .getOrElse(Ok)
-        .withCookies(
-          Cookie(
-            name = BWHC_SESSION_KEY,
-            value = session.token.value,
-//            domain = ""  //TODO: add bwhc-domain in production
-//            path = "/bwhc",
-//            secure = true,  //TODO: enable production
-            httpOnly = false
-//            httpOnly = true
-          )
+      val oauthToken =
+        OAuthToken(
+          session.token,
+          TokenType.Bearer,
+          timeoutSeconds,
+          None,
+          session.createdAt,
+          Some("bwhc")
         )
-   
+
+      Ok(Json.toJson(oauthToken))
+
     }
 
   }
@@ -156,16 +147,20 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Option[UserWithRoles]] = {
 
-    log.debug(s"Authenticating request: ${request.cookies.get(BWHC_SESSION_KEY)}")
+    val authorization = request.headers.get(AUTHORIZATION)
+
+    log.debug(s"Authenticating request: ${authorization}")
 
     Future.successful {
 
       for {
 
-        token <- request.cookies.get(BWHC_SESSION_KEY).map(_.value)
-//        token <- request.session.get(BWHC_SESSION_KEY)
+        token <- authorization
+                   .filter(_.startsWith("Bearer "))
+                   .map(_.split(" ")(1))
+                   .map(AccessToken(_))
 
-        session <- sessions.get(Session.Token(token))
+        session <- sessions.get(token)
 
         if (Instant.now isBefore session.lastRefresh.plusSeconds(timeoutSeconds))
 
@@ -190,18 +185,21 @@ with Logging
 
       val loggedOut =
         for {
-          tkn <- request.session.get(BWHC_SESSION_KEY)
 
-          ssn <- sessions remove Session.Token(tkn)
+          token <- request.headers.get(AUTHORIZATION)
+                   .filter(_.startsWith("Bearer "))
+                   .map(_.split(" ")(1))
+                   .map(AccessToken(_))
+
+          ssn <- sessions remove token
 
            _ = log.info(s"Successfully logged out ${ssn.userWithRoles.userId}")
 
-//           result = Ok.removingFromSession(BWHC_SESSION_KEY)(request)
-           result = Ok.discardingCookies(DiscardingCookie(BWHC_SESSION_KEY))
+           result = Ok
 
         } yield result
 
-      loggedOut.getOrElse(NotFound.withNewSession)
+      loggedOut.getOrElse(NotFound)
 
     }
 
