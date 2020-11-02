@@ -52,9 +52,8 @@ with Logging
   import play.api.libs.json.{Json,Writes}
 
 
-  override def login[T: Writes](
+  override def login[T](
     userWithRoles: UserWithRoles,
-//    body: Option[T] = None
   )(
     implicit
     ec: ExecutionContext
