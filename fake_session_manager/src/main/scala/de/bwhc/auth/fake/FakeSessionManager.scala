@@ -52,7 +52,7 @@ with Logging
   import play.api.libs.json.{Json,Writes}
 
 
-  override def login[T](
+  override def login(
     userWithRoles: UserWithRoles,
   )(
     implicit

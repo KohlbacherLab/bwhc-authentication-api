@@ -97,7 +97,7 @@ with Logging
   )
 
 
-  override def login[T](
+  override def login(
     userWithRoles: UserWithRoles,
   )(
     implicit

@@ -24,7 +24,7 @@ object UserSessionManager extends SPILoader(classOf[UserSessionManagerProvider])
 trait UserSessionManager extends AuthenticationService[UserWithRoles]
 {
 
-  def login[T](
+  def login(
     userWithRoles: UserWithRoles,
   )(
     implicit
