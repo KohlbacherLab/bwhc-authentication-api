@@ -108,6 +108,42 @@ with Logging
 
     Future.successful {
 
+      val prevSession =
+        sessions.values
+          .find(session => session.userWithRoles.userId == userWithRoles.userId)
+
+      prevSession match {
+
+        case None => {
+
+          val session = 
+            Session(
+              newToken,
+              Instant.now,
+              userWithRoles,
+              Instant.now
+            )
+          
+          sessions += (session.token -> session)
+          
+          val oauthToken =
+            OAuthToken(
+              session.token,
+              TokenType.Bearer,
+              timeoutSeconds,
+              None,
+              session.createdAt,
+              Some("bwhc")
+            )
+          
+          Ok(Json.toJson(oauthToken))
+      }
+
+      case Some(_) =>
+        Forbidden("Already logged in!")
+    }
+
+/* 
       sessions.values
         .find(session => session.userWithRoles.userId == userWithRoles.userId)
         .map(_.token)
@@ -134,7 +170,7 @@ with Logging
         )
 
       Ok(Json.toJson(oauthToken))
-
+*/
     }
 
   }

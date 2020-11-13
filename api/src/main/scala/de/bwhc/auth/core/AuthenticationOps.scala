@@ -35,15 +35,53 @@ trait AuthenticationOps[User] extends AuthorizationOps
 
   type AuthReq[+T] = AuthenticatedRequest[User,T]
 
-  type UserActionBuilder[User] = ActionBuilder[AuthReq,AnyContent]
+  type AuthActionBuilder[User] = ActionBuilder[AuthReq,AnyContent]
 
+/*
+  def authService: AuthenticationService[User]
+
+
+  val authActionBuilder =
+    new ActionBuilder[AuthReq, AnyContent]
+    {
+
+      val parser = controllerComponents.parsers.default
+
+      val executionContext = defaultExecutionContext
+
+      def invokeBlock[T](
+        request: Request[T],
+        block: AuthReq[T] => Future[Result]
+      ): Future[Result] = {
+
+        for {
+          optUser <- authService.authenticate(request)(executionContext)
+          result  <- optUser match {
+                       case Some(user) => block(new AuthenticatedRequest(user,request))
+                       case None    => Future.successful(Unauthorized)
+                     }
+        } yield result
+      }
+
+    }
+
+
+  def AuthenticatedAction: AuthActionBuilder[User] =
+    authActionBuilder
+
+
+  def AuthenticatedAction(
+    authorization: Authorization[User]
+  ): AuthActionBuilder[User] = 
+    AuthenticatedAction andThen Require(authorization)
+*/
 
 
   def AuthenticatedAction(
     implicit
     ec: ExecutionContext,
     authService: AuthenticationService[User]
-  ): UserActionBuilder[User] =
+  ): AuthActionBuilder[User] =
     new ActionBuilder[AuthReq, AnyContent]
     {
       val parser = controllerComponents.parsers.default
@@ -56,10 +94,10 @@ trait AuthenticationOps[User] extends AuthorizationOps
       ): Future[Result] = {
 
         for {
-          optUser <- authService.authenticate(request)
+          optUser <- authService authenticate request 
           result  <- optUser match {
                        case Some(user) => block(new AuthenticatedRequest(user,request))
-                       case None    => Future.successful(Unauthorized)
+                       case None       => Future.successful(Unauthorized)
                      }
         } yield result
       }
@@ -73,8 +111,8 @@ trait AuthenticationOps[User] extends AuthorizationOps
     implicit
     ec: ExecutionContext,
     authService: AuthenticationService[User]
-  ): UserActionBuilder[User] = 
-    AuthenticatedAction.andThen(Require(authorization))
+  ): AuthActionBuilder[User] = 
+    AuthenticatedAction andThen Require(authorization)
 
 
 }
