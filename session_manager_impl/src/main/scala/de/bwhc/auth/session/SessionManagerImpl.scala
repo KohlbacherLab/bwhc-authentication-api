@@ -56,7 +56,8 @@ with Logging
   private val sessions: Map[AccessToken, Session] =
     TrieMap.empty[AccessToken, Session] 
 
-  private val timeoutSeconds = 300 // 5 min timeout limit
+  private val timeoutSeconds = 3600 // 1 h timeout limit
+//  private val timeoutSeconds = 300 // 5 min timeout limit
 
 
   //---------------------------------------------------------------------------
@@ -72,7 +73,7 @@ with Logging
 
       val timedOutSessionIds =
         sessions.values
-          .filter(_.lastRefresh isBefore Instant.now.minusSeconds(timeoutSeconds))
+          .filter(_.lastRefresh isBefore (Instant.now minusSeconds timeoutSeconds))
           .map(_.token)
 
       if (!timedOutSessionIds.isEmpty){
@@ -141,6 +142,7 @@ with Logging
 
       case Some(_) =>
         Forbidden("Already logged in!")
+
     }
 
 /* 
