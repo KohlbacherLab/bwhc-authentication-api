@@ -56,8 +56,9 @@ with Logging
   private val sessions: Map[AccessToken, Session] =
     TrieMap.empty[AccessToken, Session] 
 
-  private val timeoutSeconds = 3600 // 1 h timeout limit
-//  private val timeoutSeconds = 300 // 5 min timeout limit
+  private val timeoutDuration = 3600    // 1 h timeout limit
+
+  private val maxDuration     = 24*3600 // 24 h timeout limit
 
 
   //---------------------------------------------------------------------------
@@ -73,7 +74,12 @@ with Logging
 
       val timedOutSessionIds =
         sessions.values
-          .filter(_.lastRefresh isBefore (Instant.now minusSeconds timeoutSeconds))
+          .filter {
+            s =>
+              val now = Instant.now
+              (s.lastRefresh isBefore (now minusSeconds timeoutDuration)) ||
+                (s.createdAt isBefore (now minusSeconds maxDuration))
+          }
           .map(_.token)
 
       if (!timedOutSessionIds.isEmpty){
@@ -131,48 +137,20 @@ with Logging
             OAuthToken(
               session.token,
               TokenType.Bearer,
-              timeoutSeconds,
+              timeoutDuration,
               None,
               session.createdAt,
               Some("bwhc")
             )
           
           Ok(Json.toJson(oauthToken))
+        }
+
+        case Some(_) =>
+          Forbidden("Already logged in!")
+
       }
 
-      case Some(_) =>
-        Forbidden("Already logged in!")
-
-    }
-
-/* 
-      sessions.values
-        .find(session => session.userWithRoles.userId == userWithRoles.userId)
-        .map(_.token)
-        .tapEach(sessions remove _)
-
-      val session = 
-        Session(
-          newToken,
-          Instant.now,
-          userWithRoles,
-          Instant.now
-        )
-
-      sessions += (session.token -> session)
-
-      val oauthToken =
-        OAuthToken(
-          session.token,
-          TokenType.Bearer,
-          timeoutSeconds,
-          None,
-          session.createdAt,
-          Some("bwhc")
-        )
-
-      Ok(Json.toJson(oauthToken))
-*/
     }
 
   }
@@ -199,7 +177,7 @@ with Logging
 
         session <- sessions.get(token)
 
-        if (Instant.now isBefore session.lastRefresh.plusSeconds(timeoutSeconds))
+        if (Instant.now isBefore session.lastRefresh.plusSeconds(timeoutDuration))
 
         refreshed = session.copy(lastRefresh = Instant.now)
 
