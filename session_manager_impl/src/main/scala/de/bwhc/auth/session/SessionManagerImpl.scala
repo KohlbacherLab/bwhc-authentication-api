@@ -115,6 +115,40 @@ with Logging
 
     Future.successful {
 
+      sessions.values
+        .find(session => session.userWithRoles.userId == userWithRoles.userId)
+        .foreach { 
+           ssn =>
+             log.warn(s"User ${userWithRoles.userId} already logged in! Processing re-login request.")
+             sessions -= ssn.token
+        }
+
+      val session = 
+        Session(
+          newToken,
+          Instant.now,
+          userWithRoles,
+          Instant.now
+        )
+      
+      sessions += (session.token -> session)
+
+      log.info(s"User ${userWithRoles.userId} logged in session: ${session.token.value}")
+      
+      val oauthToken =
+        OAuthToken(
+          session.token,
+          TokenType.Bearer,
+          timeoutDuration,
+          None,
+          session.createdAt,
+          Some("bwhc")
+        )
+      
+      Ok(Json.toJson(oauthToken))
+
+
+/*
       val prevSession =
         sessions.values
           .find(session => session.userWithRoles.userId == userWithRoles.userId)
@@ -132,6 +166,8 @@ with Logging
             )
           
           sessions += (session.token -> session)
+
+          log.info(s"User ${userWithRoles.userId} logged in session: ${session.token.value}")
           
           val oauthToken =
             OAuthToken(
@@ -150,7 +186,7 @@ with Logging
           Forbidden("Already logged in!")
 
       }
-
+*/
     }
 
   }
