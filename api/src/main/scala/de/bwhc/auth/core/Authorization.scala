@@ -62,11 +62,6 @@ object Authorization
       def isAuthorized(user: User) = f(user)
     }
 
-
-//  implicit def fromPredicate[User](f: User => Boolean): Authorization[User] =
-//    apply(f)
-
-
 }
 
 

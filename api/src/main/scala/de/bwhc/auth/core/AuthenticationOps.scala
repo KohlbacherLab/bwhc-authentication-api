@@ -14,15 +14,16 @@ import play.api.mvc.{
   BodyParser
 }
 
+
 /*
 
-Based on examples found in Play documentation on Action Composition
+  Based on examples found in Play documentation on Action Composition:
  
-https://www.playframework.com/documentation/2.8.x/ScalaActionsComposition#Action-composition
+  https://www.playframework.com/documentation/2.8.x/ScalaActionsComposition#Action-composition
 
-combined with inspiration drawn from Silhouette
+  combined with inspiration drawn from Silhouette:
 
-https://www.silhouette.rocks/
+  https://www.silhouette.rocks/
 
 */
 
@@ -37,45 +38,6 @@ trait AuthenticationOps[User] extends AuthorizationOps
 
   type AuthActionBuilder[User] = ActionBuilder[AuthReq,AnyContent]
 
-/*
-  def authService: AuthenticationService[User]
-
-
-  val authActionBuilder =
-    new ActionBuilder[AuthReq, AnyContent]
-    {
-
-      val parser = controllerComponents.parsers.default
-
-      val executionContext = defaultExecutionContext
-
-      def invokeBlock[T](
-        request: Request[T],
-        block: AuthReq[T] => Future[Result]
-      ): Future[Result] = {
-
-        for {
-          optUser <- authService.authenticate(request)(executionContext)
-          result  <- optUser match {
-                       case Some(user) => block(new AuthenticatedRequest(user,request))
-                       case None    => Future.successful(Unauthorized)
-                     }
-        } yield result
-      }
-
-    }
-
-
-  def AuthenticatedAction: AuthActionBuilder[User] =
-    authActionBuilder
-
-
-  def AuthenticatedAction(
-    authorization: Authorization[User]
-  ): AuthActionBuilder[User] = 
-    AuthenticatedAction andThen Require(authorization)
-*/
-
 
   def AuthenticatedAction(
     implicit
@@ -84,11 +46,11 @@ trait AuthenticationOps[User] extends AuthorizationOps
   ): AuthActionBuilder[User] =
     new ActionBuilder[AuthReq, AnyContent]
     {
-      val parser = controllerComponents.parsers.default
+      override val parser = controllerComponents.parsers.default
 
-      val executionContext = ec
+      override val executionContext = ec
 
-      def invokeBlock[T](
+      override def invokeBlock[T](
         request: Request[T],
         block: AuthReq[T] => Future[Result]
       ): Future[Result] = {
