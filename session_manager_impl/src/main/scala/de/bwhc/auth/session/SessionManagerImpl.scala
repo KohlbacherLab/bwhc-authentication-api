@@ -4,11 +4,8 @@ package de.bwhc.auth.session
 
 import java.time.Instant
 import java.util.UUID
-
 import scala.concurrent.{ExecutionContext,Future}
-
 import scala.collection.concurrent.{Map,TrieMap}
-
 import play.api.mvc.{
   ControllerHelpers,
   Cookie,
@@ -16,13 +13,9 @@ import play.api.mvc.{
   RequestHeader,
   Result
 }
-
 import play.api.libs.json.{Json,Writes}
-
 import de.bwhc.util.Logging
-
 import de.bwhc.auth.api._
-
 import de.bwhc.user.api.{User,Role}
 
 
@@ -51,7 +44,10 @@ with Logging
 
 
   private def newToken: AccessToken =
-    AccessToken(UUID.randomUUID.toString)
+//    AccessToken(UUID.randomUUID.toString)
+    AccessToken(
+      Seq.fill(3)(UUID.randomUUID.toString).mkString
+    )
 
   private val sessions: Map[AccessToken, Session] =
     TrieMap.empty[AccessToken, Session] 
@@ -147,46 +143,6 @@ with Logging
       
       Ok(Json.toJson(oauthToken))
 
-
-/*
-      val prevSession =
-        sessions.values
-          .find(session => session.userWithRoles.userId == userWithRoles.userId)
-
-      prevSession match {
-
-        case None => {
-
-          val session = 
-            Session(
-              newToken,
-              Instant.now,
-              userWithRoles,
-              Instant.now
-            )
-          
-          sessions += (session.token -> session)
-
-          log.info(s"User ${userWithRoles.userId} logged in session: ${session.token.value}")
-          
-          val oauthToken =
-            OAuthToken(
-              session.token,
-              TokenType.Bearer,
-              timeoutDuration,
-              None,
-              session.createdAt,
-              Some("bwhc")
-            )
-          
-          Ok(Json.toJson(oauthToken))
-        }
-
-        case Some(_) =>
-          Forbidden("Already logged in!")
-
-      }
-*/
     }
 
   }
