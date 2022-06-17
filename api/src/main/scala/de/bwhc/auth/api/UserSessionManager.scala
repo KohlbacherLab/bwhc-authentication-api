@@ -18,7 +18,7 @@ import de.bwhc.auth.core.AuthenticationService
 trait UserSessionManagerProvider extends SPI[UserSessionManager]
 
 
-object UserSessionManager extends SPILoader(classOf[UserSessionManagerProvider])
+object UserSessionManager extends SPILoader[UserSessionManagerProvider]
 
 
 trait UserSessionManager extends AuthenticationService[UserWithRoles]
