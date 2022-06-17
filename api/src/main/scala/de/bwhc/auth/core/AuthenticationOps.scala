@@ -23,7 +23,7 @@ import play.api.mvc.{
 
   combined with inspiration drawn from Silhouette:
 
-  https://www.silhouette.rocks/
+  https://github.com/mohiva/play-silhouette
 
 */
 
