@@ -78,3 +78,4 @@ trait AuthenticationOps[User] extends AuthorizationOps
 
 
 }
+

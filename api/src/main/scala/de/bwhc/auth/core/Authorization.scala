@@ -25,55 +25,72 @@ import play.api.mvc.{
 
 trait Authorization[User]
 {
-  def isAuthorized(user: User): Future[Boolean]
+  def isAuthorized(
+    user: User
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Boolean]
+  
 }
 
 
 object Authorization
 {
 
-  implicit class LogicalOperatorSyntax[User](val a: Authorization[User])(
-    implicit ec: ExecutionContext
-  ){
+  implicit class LogicalOperatorSyntax[User](val a: Authorization[User]) extends AnyVal
+  {
 
-    def &&(b: Authorization[User]) = new Authorization[User]{
-      def isAuthorized(user: User) =
-        for {
-          okA <- a.isAuthorized(user)
-          okB <- b.isAuthorized(user)
-        } yield okA && okB
-    }
+    def and(b: Authorization[User]): Authorization[User] =
+      new Authorization[User]{
+        override def isAuthorized(user: User)(implicit ec: ExecutionContext) =
+          a.isAuthorized(user)
+            .flatMap {
+              // AND logic:
+              // if first authorization check already fails, short-circuit to 'false'
+              // else result depends on second auth check
+              case false => Future.successful(false)
+              case true  => b.isAuthorized(user)
+            }
+      }
 
-    def ||(b: Authorization[User]) = new Authorization[User]{
-      def isAuthorized(user: User) =
-        for {
-          okA <- a.isAuthorized(user)
-          result <- if (okA) Future.successful(okA)
-                    else b.isAuthorized(user)
-        } yield result
-    }
 
-    def and(b: Authorization[User]) = a && b
+    def or(b: Authorization[User]) =
+      new Authorization[User]{
+        override def isAuthorized(user: User)(implicit ec: ExecutionContext) =
+          a.isAuthorized(user)
+           .flatMap {
+             // OR logic:
+             // if first authorization check already succeeds, short-circuit to 'true'
+             // else result depends on second auth check
+             case true  => Future.successful(true)
+             case false => b.isAuthorized(user)
+           }
+      }
 
-    def or(b: Authorization[User]) = a || b
 
-    def AND(b: Authorization[User]) = a && b
+    def &&(b: Authorization[User]) = a and b
 
-    def OR(b: Authorization[User]) = a || b
+    def ||(b: Authorization[User]) = a or b
 
+    def AND(b: Authorization[User]) = a and b
+
+    def OR(b: Authorization[User]) = a or b
+ 
   }
 
 
   def apply[User](f: User => Boolean): Authorization[User] =
     new Authorization[User]{
-      def isAuthorized(user: User) = Future.successful(f(user))
+      def isAuthorized(user: User)(implicit ec: ExecutionContext) =
+        Future.successful(f(user))
     }
+
 
   def async[User](f: User => Future[Boolean]): Authorization[User] =
     new Authorization[User]{
-      def isAuthorized(user: User) = f(user)
+      def isAuthorized(user: User)(implicit ec: ExecutionContext) =
+        f(user)
     }
-
 }
 
 
